@@ -28,7 +28,7 @@ Linear shrinkage towards constant-correlation matrix; the target preserves the d
 
 **Parameters:**
 
-- `X` - matrix of `n` by `t` observations. The data used to create the covariance matrix. Should be differenced if the covariance matrix is the covariance of the differences.
+- `X` - matrix of `n` random variables by `t` observations. The data used to create the covariance matrix. Should be differenced if the covariance matrix is the covariance of the differences.
 - `S` - `n` by `n` covariance matrix. If nil, `S` will be the sample covariance matrix
 
 **Returns:**
