@@ -19,7 +19,7 @@ go get github.com/dgelody/covarianceShrinkage
 **Signature:**
 
 ```go
-func CovCor(n int, t int, X []float64, S []float64) (F []float64, norm float64, err error) 
+func CovCor(X *mat.Dense, S *mat.SymDense) (FMatrix *mat.SymDense, norm float64, err error) 
 ```
 
 **Description:**
