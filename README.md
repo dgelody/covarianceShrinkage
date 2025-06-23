@@ -53,7 +53,7 @@ Nonlinear shrinkage derived under Frobenius loss and its two cousins, Inverse St
 
 **Parameters:**
 
-- `X` - matrix of n assets by t observations
+- `X` - matrix of t observations by n assets
 - `t` — number of observations
 - `n` — number of random variables
 - `k` —  if `k < 0`,then the algorithm demeans the data by default, and adjusts the effective sample size accordingly. If the user inputs `k == 0`, then no demeaning takes place; if user inputs `k == 1`, then it signifies that the data Y have already been demeaned.
