@@ -19,7 +19,7 @@ go get github.com/dgelody/covarianceShrinkage
 **Signature:**
 
 ```go
-func CovCor(n int, t int, X []float64, S []float64) (F []float64, norm float64, err error) 
+func CovCor(X *mat.Dense, S *mat.SymDense) (FMatrix *mat.SymDense, norm float64, err error) 
 ```
 
 **Description:**
@@ -28,9 +28,7 @@ Linear shrinkage towards constant-correlation matrix; the target preserves the d
 
 **Parameters:**
 
-- `n` — number of assets
-- `t` — number of observations
-- `X` - matrix of n assets by t observations
+- `X` - matrix of `n` random variables by `t` observations. The data used to create the covariance matrix. Should be differenced if the covariance matrix is the covariance of the differences.
 - `S` - `n` by `n` covariance matrix. If nil, `S` will be the sample covariance matrix
 
 **Returns:**
@@ -49,7 +47,7 @@ func QuadraticInverseShrinkage(X []float64, t, n, k int) (F []float64, norm floa
 
 **Description:**
 
-Nonlinear shrinkage derived under Frobenius loss and its two cousins, Inverse Stein’s loss and Minimum Variance loss, called quadratic-inverse shrinkage (QIS). See Ledoit and Wolf (2022, Section 4.5).
+Nonlinear shrinkage derived under Frobenius loss and its two cousins, Inverse Stein’s loss and Minimum Variance loss, called quadratic-inverse shrinkage (QIS). Preserves the variance of the original covariance matrix. See Ledoit and Wolf (2022, Section 4.5).
 
 **Parameters:**
 
