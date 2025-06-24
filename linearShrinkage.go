@@ -77,9 +77,9 @@ func linShrink(X *mat.Dense, S *mat.SymDense, ttype Target) (F []float64, norm f
 	floats.Scale(1.0-delta, covMatrix)
 	floats.Add(F, covMatrix)
 
-	froNorm := FrobeniusNorm(originalCovMatrix, F)
+	maxAbsDiff := MaxAbsDiff(originalCovMatrix, F)
 
-	return F, froNorm, nil
+	return F, maxAbsDiff, nil
 }
 
 // Returns a covariance estimate using linear shrinkage.
@@ -87,15 +87,14 @@ func linShrink(X *mat.Dense, S *mat.SymDense, ttype Target) (F []float64, norm f
 // all correlation coefficients are the same.
 //
 // Arguments:
-// X *mat.Dense : matrix of n by t observations. The data used to create the covariance matrix.
-//
-//	Should be differenced if the covariance matrix is the covariance of the differences.
+// X *mat.Dense : matrix of n random variables by t observations. The data used to create the covariance matrix.
+// Should be differenced if the covariance matrix is the covariance of the differences.
 //
 // S *mat.SymDense: nxn covariance matrix. If nil, S will be the sample covariance matrix
 //
 // Returns:
 // F *mat.SymDense: nxn shrinkage estimator of the covariance matrix
-// norm float64: Frobenius norm between covariance matrix and shrinkage matrix
+// norm float64: maximum absolute difference between covariance and shrinkage matrix
 // err error
 func CovCor(X *mat.Dense, S *mat.SymDense) (FMatrix *mat.SymDense, norm float64, err error) {
 
@@ -137,11 +136,11 @@ func CovCor(X *mat.Dense, S *mat.SymDense) (FMatrix *mat.SymDense, norm float64,
 	floats.Scale(1.0-delta, covMatrix)
 	floats.Add(F, covMatrix)
 
-	froNorm := FrobeniusNorm(originalCovMatrix, F)
+	maxAbsDiff := MaxAbsDiff(originalCovMatrix, F)
 
 	FMatrix = mat.NewSymDense(n, F)
 
-	return FMatrix, froNorm, nil
+	return FMatrix, maxAbsDiff, nil
 }
 
 // Computes the sample covariance matrix
@@ -214,6 +213,25 @@ func FrobeniusNorm(A, B []float64) float64 {
 	return math.Sqrt(sum)
 }
 
+// Computes the maximum absolute difference between elements of matrices A and B
+//
+// Arguments:
+// A []float64: matrix A
+// B []float64: matrix B
+//
+// Returns:
+// float64: maximum absolute difference between elements
+func MaxAbsDiff(A, B []float64) float64 {
+	var maxDiff float64
+	for i := range A {
+		diff := math.Abs(A[i] - B[i])
+		if diff > maxDiff {
+			maxDiff = diff
+		}
+	}
+	return maxDiff
+}
+
 // Returns the constant correlation model.
 //
 // Arguments:
@@ -255,19 +273,76 @@ func cov1ParaTarget(n int, s []float64) (F []float64) {
 }
 
 func cov2ParaTarget(n int, s []float64) (F []float64) {
-	// TODO
+	F = make([]float64, n*n)
 
+	// Compute mean of variances (diagonal elements)
+	var meanVar float64
+	for i := 0; i < n; i++ {
+		meanVar += s[i*n+i]
+	}
+	meanVar /= float64(n)
+
+	// Compute mean of covariances (off-diagonal elements)
+	var meanCovar float64
+	for i := 0; i < n; i++ {
+		for j := 0; j < n; j++ {
+			if i != j {
+				meanCovar += s[i*n+j]
+			}
+		}
+	}
+	meanCovar /= float64(n * (n - 1))
+
+	// Construct target matrix
+	for i := 0; i < n; i++ {
+		for j := 0; j < n; j++ {
+			if i == j {
+				F[i*n+j] = meanVar
+			} else {
+				F[i*n+j] = meanCovar
+			}
+		}
+	}
 	return F
 }
 
 func covDiagTarget(n int, s []float64) (F []float64) {
-	// TODO
+	F = make([]float64, n*n)
+
+	for i := 0; i < n; i++ {
+		F[i*n+i] = s[i*n+i]
+	}
 
 	return F
 }
 
 func covMarketTarget(n int, s []float64) (F []float64) {
-	// TODO
+	F = make([]float64, n*n)
+
+	// Step 1: Compute covmkt[i] = average covariance of asset i with the market
+	covmkt := make([]float64, n)
+	for i := 0; i < n; i++ {
+		covmkt[i] = sumRow(s, i, n) / float64(n)
+	}
+
+	// Step 2: Compute varmkt = mean of squared covmkt entries
+	var varmkt float64
+	for i := 0; i < n; i++ {
+		varmkt += covmkt[i] * covmkt[i]
+	}
+	varmkt /= float64(n)
+
+	// Step 3: Compute outer product of covmkt, normalize by varmkt
+	for i := 0; i < n; i++ {
+		for j := 0; j < n; j++ {
+			F[i*n+j] = (covmkt[i] * covmkt[j]) / varmkt
+		}
+	}
+
+	// Step 4: Replace diagonal with variances from sample covariance matrix s
+	for i := 0; i < n; i++ {
+		F[i*n+i] = s[i*n+i]
+	}
 
 	return F
 }

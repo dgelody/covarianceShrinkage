@@ -15,28 +15,38 @@ import (
 // Returns the Quadratic-Inverse-Shrinkage covariance estimator.
 //
 // Arguments:
-// X []float64: matrix of t periods by n assets
-// t int: number of observations (time periods)
-// n int: number of assets (variables)
-// k int: lag parameter (use 1 for standard “demean, divide by t-1”)
+// X *mat.Dense : matrix of t observations by n random variables. The data used to create the covariance matrix.
+// Should be differenced if the covariance matrix is the covariance of the differences.
+//
+// S *mat.SymDense: nxn covariance matrix. If nil, S will be the sample covariance matrix
+
+// deameanData bool: if true then demean the data, otherwise no demeaning takes place
 //
 // Returns:
-// []float64: the Quadratic-Inverse-Shrinkage covariance estimator
-// error
-func QuadraticInverseShrinkage(X []float64, t, n, k int) (F []float64, norm float64, err error) {
+// F *mat.Dense: the Quadratic-Inverse-Shrinkage covariance estimator
+// norm float64: maximum absolute difference between covariance and shrinkage matrix
+// err error
+func QuadraticInverseShrinkage(X *mat.Dense, S *mat.SymDense, demeanData bool) (F *mat.Dense, norm float64, err error) {
+
+	rawX := X.RawMatrix().Data
+
+	t := X.RawMatrix().Rows
+	n := X.RawMatrix().Cols
+	k := 1
+
 	// Sanity Checks
-	if t <= 0 || n <= 0 {
-		return nil, 0.0, errors.New("QIS: t and n must be > 0")
+	if t <= 1 || n <= 0 {
+		return nil, 0.0, errors.New("QIS: t must be greater than 1 and n must be greater than 0")
 	}
-	if len(X) != t*n {
+	if len(rawX) != t*n {
 		return nil, 0.0, errors.New("QIS: len(X) != t * n")
 	}
 
-	Y := mat.NewDense(t, n, X)
+	Y := mat.NewDense(t, n, rawX)
 	Yc := mat.DenseCopyOf(Y)
-	tEff := t - k
 
-	if k < 0 {
+	var tEff int
+	if demeanData {
 		k = 1
 
 		// Demean the matrix X
@@ -54,16 +64,21 @@ func QuadraticInverseShrinkage(X []float64, t, n, k int) (F []float64, norm floa
 
 	}
 
-	// Compute sample covariance matrix S
-	var S mat.Dense
-	S.Mul(Yc.T(), Yc)
-	S.Scale(1/float64(tEff), &S)
+	if S == nil {
+		S = mat.NewSymDense(n, nil)
 
-	// Enforce symmetry numerically
-	var tmp mat.Dense
-	tmp.Add(&S, S.T())
-	tmp.Scale(0.5, &tmp)
-	S.CloneFrom(&tmp)
+		for i := 0; i < n; i++ {
+			for j := i; j < n; j++ {
+				var sum float64
+				for k := 0; k < t; k++ {
+					yi := Yc.At(k, i)
+					yj := Yc.At(k, j)
+					sum += yi * yj
+				}
+				S.SetSym(i, j, sum/float64(tEff))
+			}
+		}
+	}
 
 	// Eigen-decomposition
 	var eig mat.EigenSym
@@ -151,6 +166,7 @@ func QuadraticInverseShrinkage(X []float64, t, n, k int) (F []float64, norm floa
 	diagDelta := mat.NewDiagDense(n, delta)
 	var tmp2 mat.Dense
 	tmp2.Mul(&U, diagDelta)
+
 	var sigma mat.Dense
 	sigma.Mul(&tmp2, U.T())
 
@@ -158,11 +174,11 @@ func QuadraticInverseShrinkage(X []float64, t, n, k int) (F []float64, norm floa
 	out := make([]float64, len(rm.Data))
 	copy(out, rm.Data)
 
-	cm := S.RawMatrix()
+	cm := S.RawSymmetric()
 	covMatrix := make([]float64, len(cm.Data))
 	copy(covMatrix, cm.Data)
 
-	norm = FrobeniusNorm(covMatrix, out)
+	maxAbsDiff := MaxAbsDiff(covMatrix, out)
 
-	return out, norm, nil
+	return &sigma, maxAbsDiff, nil
 }
