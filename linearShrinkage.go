@@ -96,7 +96,7 @@ func linShrink(X *mat.Dense, S *mat.SymDense, ttype Target) (F []float64, norm f
 // F *mat.SymDense: nxn shrinkage estimator of the covariance matrix
 // norm float64: maximum absolute difference between covariance and shrinkage matrix
 // err error
-func CovCor(X *mat.Dense, S *mat.SymDense) (FMatrix *mat.SymDense, norm float64, err error) {
+func CovCor(X *mat.Dense, S *mat.SymDense) (F *mat.SymDense, norm float64, err error) {
 
 	rawX := X.RawMatrix().Data
 
@@ -128,19 +128,19 @@ func CovCor(X *mat.Dense, S *mat.SymDense) (FMatrix *mat.SymDense, norm float64,
 	originalCovMatrix := make([]float64, len(covMatrix))
 	copy(originalCovMatrix, covMatrix)
 
-	F := covCorTarget(n, covMatrix)
+	rawF := covCorTarget(n, covMatrix)
 	delta := shrinkageIntensity(n, t, rawX, covMatrix)
 
 	// shrinkage estimator of the covariance matrix = delta*F + (1-delta)*S
-	floats.Scale(delta, F)
+	floats.Scale(delta, rawF)
 	floats.Scale(1.0-delta, covMatrix)
-	floats.Add(F, covMatrix)
+	floats.Add(rawF, covMatrix)
 
-	maxAbsDiff := MaxAbsDiff(originalCovMatrix, F)
+	maxAbsDiff := MaxAbsDiff(originalCovMatrix, rawF)
 
-	FMatrix = mat.NewSymDense(n, F)
+	F = mat.NewSymDense(n, rawF)
 
-	return FMatrix, maxAbsDiff, nil
+	return F, maxAbsDiff, nil
 }
 
 // Computes the sample covariance matrix
