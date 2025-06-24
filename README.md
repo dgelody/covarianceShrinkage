@@ -42,7 +42,7 @@ Linear shrinkage towards constant-correlation matrix; the target preserves the d
 **Signature:**
 
 ```go
-func QuadraticInverseShrinkage(X []float64, t, n, k int) (F []float64, norm float64, err error)
+func QuadraticInverseShrinkage(X *mat.Dense, S *mat.SymDense, demeanData bool) (F *mat.Dense, norm float64, err error)
 ```
 
 **Description:**
