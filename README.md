@@ -34,7 +34,7 @@ Linear shrinkage towards constant-correlation matrix; the target preserves the d
 **Returns:**
 
 - `F` - `n` by `n` shrinkage estimator of the covariance matrix
-- `norm` - Frobenius norm between the covariance matrix `S` and the shrinkage estimator of the covariance matrix `F`
+- `norm` - maximum absolute difference between the covariance matrix `S` and the shrinkage estimator of the covariance matrix `F`
 - `err` - error
 
 ### `QuadraticInverseShrinkage`
@@ -51,15 +51,14 @@ Nonlinear shrinkage derived under Frobenius loss and its two cousins, Inverse St
 
 **Parameters:**
 
-- `X` - matrix of t observations by n assets
-- `t` — number of observations
-- `n` — number of random variables
-- `k` —  if `k < 0`,then the algorithm demeans the data by default, and adjusts the effective sample size accordingly. If the user inputs `k == 0`, then no demeaning takes place; if user inputs `k == 1`, then it signifies that the data Y have already been demeaned.
+- `X` - matrix of `t` observations by `n` random variables. The data used to create the covariance matrix. Should be differenced if the covariance matrix is the covariance of the differences.
+- `S` - `n` by `n` covariance matrix. If nil, `S` will be the sample covariance matrix
+- `demeanData` -  if true then demean the data, otherwise no demeaning takes place
 
 **Returns:**
 
 - `F` - `n` by `n` shrinkage estimator of the covariance matrix
-- `norm` - Frobenius norm between the covariance matrix `S` and the shrinkage estimator of the covariance matrix `F`
+- `norm` - maximum absolute difference between the covariance matrix `S` and the shrinkage estimator of the covariance matrix `F`
 - `err` - error
 
 ---
